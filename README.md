@@ -59,13 +59,34 @@ Launch web UI from the parent directory that contains the agent folders:
 adk web . --port 8000
 ```
 Open the URL shown (e.g., http://127.0.0.1:8000). Select an agent in the top‑left dropdown:
-- `sequential_workflow`
-- `parallel_workflow` (shows Search grounding behavior)
-- `loop_workflow`
-- `my_agent`
+Open the URL shown (e.g., http://127.0.0.1:8000). Select an agent in the top‑left dropdown:
+ - `sequential_workflow`
+ - `parallel_workflow` (shows Search grounding behavior)
+ - `loop_workflow`
+ - `my_agent`
 
 If you see a Windows reload error, try:
+To restrict which agents appear, run the server from a directory containing only the desired folders. Each `agent.py` now defines an `app` object wrapping its `root_agent` for improved compatibility.
+
+### Custom minimal frontend (optional)
+We added a simple client at `frontend/index.html` that lists your agents, lets you pick one, and chat. Refreshing the page resets the chat (a new session is created when you click Connect).
+
+1) Start the API server:
 ```powershell
+adk api_server . --port 8080
+```
+2) Fix CORS (browser security) by running the included proxy:
+```powershell
+python cors_proxy.py
+```
+This exposes `http://127.0.0.1:8090/api` with permissive CORS and forwards to the ADK server.
+
+3) Open the frontend file directly in your browser (double‑click `frontend/index.html`). The default server URL is set to `http://127.0.0.1:8090/api`. You can change it in the top bar if you run a different port.
+
+Notes:
+- The frontend whitelists these apps: `my_agent`, `sequential_workflow`, `parallel_workflow`, `loop_workflow`.
+- It uses `/list-apps` to populate the dropdown and `/run_sse` with `streaming: true` for live responses.
+ - If you prefer not to run the proxy, serve the frontend from the same origin (port) as the API via a reverse proxy, or use a static server that injects CORS headers on responses from the API.
 adk web . --port 8000 --no-reload
 ```
 
