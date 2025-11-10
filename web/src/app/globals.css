@@ -137,15 +137,8 @@
 
 .connect-gradient {
   position: relative;
-  isolation: isolate;
-}
-
-.connect-gradient::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
+  padding: 2px;
   border-radius: 0.5rem;
-  padding: 3px;
   background: linear-gradient(
     90deg,
     #4285f4,
@@ -156,12 +149,11 @@
   );
   background-size: 300% 100%;
   animation: gradient-rotate 3s ease infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  z-index: -1;
-  pointer-events: none;
+}
+
+.connect-gradient > button {
+  background: hsl(var(--background));
+  border-radius: calc(0.5rem - 2px);
 }
 
 @keyframes spin {
@@ -175,4 +167,35 @@
   border: 2px solid hsl(0 0% 90%);
   border-top-color: oklch(var(--primary));
   animation: spin .8s linear infinite;
+}
+
+/* Custom scrollbar styling for chat area */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0 0 / 0.3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0 0 / 0.5);
+  background-clip: content-box;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0 0 / 0.4);
+  background-clip: content-box;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0 / 0.6);
+  background-clip: content-box;
 }

@@ -1,0 +1,38 @@
+{
+  "my_agent": {
+    "title": "My Agent",
+    "description": "A general-purpose conversational agent designed to assist with a wide range of tasks and queries.",
+    "features": [
+      "Natural language understanding",
+      "Contextual conversations",
+      "Task assistance and guidance"
+    ]
+  },
+  "sequential_workflow": {
+    "title": "Sequential Workflow",
+    "description": "Processes tasks in a step-by-step sequence, ensuring each step completes before moving to the next.",
+    "features": [
+      "Linear task execution",
+      "Step-by-step processing",
+      "Predictable workflow order"
+    ]
+  },
+  "parallel_workflow": {
+    "title": "Parallel Workflow",
+    "description": "Executes multiple tasks simultaneously for faster processing and improved efficiency.",
+    "features": [
+      "Concurrent task execution",
+      "Optimized performance",
+      "Simultaneous processing"
+    ]
+  },
+  "loop_workflow": {
+    "title": "Loop Workflow",
+    "description": "Iteratively processes tasks with multiple agents collaborating in cycles until completion.",
+    "features": [
+      "Iterative refinement",
+      "Multi-agent collaboration",
+      "Continuous improvement"
+    ]
+  }
+}
