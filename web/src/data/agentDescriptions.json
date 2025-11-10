@@ -34,5 +34,15 @@
       "Quality-based automatic termination",
       "Critic provides targeted improvement suggestions"
     ]
+  },
+  "currency_converter": {
+    "title": "Currency Converter Agent",
+    "description": "Real-time currency conversion powered by code execution. Fetches live exchange rates and performs multi-currency calculations dynamically using Python code execution in a secure sandbox.",
+    "features": [
+      "Real-time exchange rates from public APIs",
+      "Support for 150+ currency pairs (USD, EUR, GBP, JPY, INR, etc.)",
+      "Multi-currency conversion calculations",
+      "Clear formatted output with currency symbols"
+    ]
   }
 }
