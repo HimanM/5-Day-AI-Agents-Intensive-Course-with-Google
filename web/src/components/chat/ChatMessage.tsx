@@ -15,16 +15,61 @@ const getAgentIcon = (agentName: string) => {
   return AGENT_ICONS[iconIndex];
 };
 
+interface GroundingMetadata {
+  webSearchQueries?: string[];
+  searchEntryPoint?: {
+    renderedContent?: string;
+  };
+}
+
 interface Message {
   role: 'user' | 'agent' | 'system';
   text: string;
   author?: string;
   id: string;
   loading?: boolean;
+  groundingMetadata?: GroundingMetadata;
 }
 
 interface ChatMessageProps {
   msg: Message;
+}
+
+// Google Search Display Component
+function GoogleSearchDisplay({ metadata }: { metadata: GroundingMetadata }) {
+  if (!metadata.webSearchQueries || metadata.webSearchQueries.length === 0) {
+    return null;
+  }
+
+  const queries = metadata.webSearchQueries;
+  
+  return (
+    <div className="mt-3 pt-3 border-t border-border/30">
+      <div className="flex items-center gap-2">
+        {/* Google Icon SVG */}
+        <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+        </svg>
+        
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium opacity-60 mb-1">Google Search</div>
+          <div className="space-y-1">
+            {queries.map((query, idx) => (
+              <a
+                key={idx}
+                href={`https://www.google.com/search?q=${encodeURIComponent(query)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline block truncate"
+              >
+                {query}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ChatMessage({ msg }: ChatMessageProps) {
@@ -71,6 +116,7 @@ export function ChatMessage({ msg }: ChatMessageProps) {
               </div>
             )}
             {msg.text}
+            {msg.groundingMetadata && <GoogleSearchDisplay metadata={msg.groundingMetadata} />}
           </>
         )}
       </div>

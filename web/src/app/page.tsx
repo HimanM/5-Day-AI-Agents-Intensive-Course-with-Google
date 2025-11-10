@@ -8,12 +8,20 @@ import { Footer } from '@/components/chat/Footer';
 
 const API_BASE = '/api';
 
+interface GroundingMetadata {
+  webSearchQueries?: string[];
+  searchEntryPoint?: {
+    renderedContent?: string;
+  };
+}
+
 interface Message {
   role: 'user' | 'agent' | 'system';
   text: string;
   author?: string;
   id: string;
   loading?: boolean;
+  groundingMetadata?: GroundingMetadata;
 }
 
 export default function ChatPage() {
@@ -149,6 +157,12 @@ export default function ChatPage() {
             const author = evt?.author || evt?.content?.role || 'model';
             console.log(`[SSE] Chunk from ${author}:`, chunk.substring(0, 20));
             
+            // Extract grounding metadata if present (usually comes with finishReason)
+            const groundingMetadata = evt?.groundingMetadata ? {
+              webSearchQueries: evt.groundingMetadata.webSearchQueries,
+              searchEntryPoint: evt.groundingMetadata.searchEntryPoint
+            } : undefined;
+            
             // Remove loading bubble on first chunk
             if (loadingMsgId) {
               setMessages(prev => prev.filter(m => m.id !== loadingMsgId));
@@ -164,7 +178,9 @@ export default function ChatPage() {
                 const updated = [...prev];
                 updated[trackedIdx] = { 
                   ...updated[trackedIdx], 
-                  text: (updated[trackedIdx].text || '') + chunk 
+                  text: (updated[trackedIdx].text || '') + chunk,
+                  // Add or update grounding metadata if present
+                  ...(groundingMetadata ? { groundingMetadata } : {})
                 };
                 return updated;
               } else {
@@ -172,7 +188,13 @@ export default function ChatPage() {
                 const newIdx = prev.length;
                 const newMsgId = `agent-${author}-${Date.now()}-${newIdx}`;
                 authorBubbles.current.set(author, newIdx);
-                return [...prev, { role: 'agent', text: chunk, author, id: newMsgId }];
+                return [...prev, { 
+                  role: 'agent', 
+                  text: chunk, 
+                  author, 
+                  id: newMsgId,
+                  ...(groundingMetadata ? { groundingMetadata } : {})
+                }];
               }
             });
           } catch {}

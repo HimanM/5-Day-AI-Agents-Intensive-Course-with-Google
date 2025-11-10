@@ -2,12 +2,20 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { AgentInfoBox } from './AgentInfoBox';
 import { ChatMessage } from './ChatMessage';
 
+interface GroundingMetadata {
+  webSearchQueries?: string[];
+  searchEntryPoint?: {
+    renderedContent?: string;
+  };
+}
+
 interface Message {
   role: 'user' | 'agent' | 'system';
   text: string;
   author?: string;
   id: string;
   loading?: boolean;
+  groundingMetadata?: GroundingMetadata;
 }
 
 interface ChatContainerProps {
