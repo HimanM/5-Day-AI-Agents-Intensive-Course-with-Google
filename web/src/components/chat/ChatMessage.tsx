@@ -74,6 +74,7 @@ function GoogleSearchDisplay({ metadata }: { metadata: GroundingMetadata }) {
 
 export function ChatMessage({ msg }: ChatMessageProps) {
   const isShort = msg.role === 'user' && msg.text.length < 40 && !msg.loading;
+  const isError = msg.role === 'system' && (msg.text.includes('❌') || msg.text.includes('⚠️') || msg.text.includes('🔒'));
 
   return (
     <div
@@ -89,12 +90,13 @@ export function ChatMessage({ msg }: ChatMessageProps) {
           px-5 py-3 rounded-2xl cursor-default transition-all
           ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : ''}
           ${msg.role === 'agent' || msg.loading ? 'bg-muted text-muted-foreground' : ''}
-          ${msg.role === 'system' ? 'bg-accent/50 text-xs text-center' : ''}
+          ${msg.role === 'system' && !isError ? 'bg-accent/50 text-xs text-center' : ''}
+          ${isError ? 'bg-destructive/10 border-2 border-destructive/30 text-sm text-left' : ''}
           whitespace-pre-wrap wrap-break-word
         `}
         style={{ 
-          maxWidth: isShort ? 'fit-content' : (msg.role === 'agent' || msg.loading ? '85%' : '70%'), 
-          minWidth: msg.loading ? '200px' : '100px',
+          maxWidth: isShort ? 'fit-content' : (msg.role === 'agent' || msg.loading ? '85%' : (isError ? '90%' : '70%')), 
+          minWidth: msg.loading ? '200px' : (isError ? '300px' : '100px'),
           marginLeft: msg.role === 'agent' || msg.loading ? '0' : 'auto',
           marginRight: msg.role === 'user' ? '0' : 'auto'
         }}

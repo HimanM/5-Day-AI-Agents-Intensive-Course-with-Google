@@ -132,6 +132,39 @@ export default function ChatPage() {
           try {
             const evt = JSON.parse(line.slice(6));
             
+            // Handle error events from server
+            if (evt.error === true) {
+              // Remove loading bubble
+              if (loadingMsgId) {
+                setMessages(prev => prev.filter(m => m.id !== loadingMsgId));
+                setLoadingMsgId(null);
+              }
+              
+              // Format user-friendly error message
+              let errorText = 'An error occurred';
+              if (evt.status === 429) {
+                errorText = '⚠️ Rate Limit Reached\n\nThe API rate limit has been exceeded. Please wait a moment and try again.\n\nIf this persists, check your Google Cloud quota settings.';
+              } else if (evt.status === 401 || evt.status === 403) {
+                errorText = '🔒 Authentication Error\n\nAPI key is invalid or missing. Please check your environment variables.';
+              } else if (evt.status === 500) {
+                errorText = '❌ Server Error\n\nThe agent encountered an internal error. Please try again or select a different agent.';
+              } else if (evt.message) {
+                errorText = `❌ Error (${evt.status || 'Unknown'})\n\n${evt.message}`;
+                if (evt.details) {
+                  errorText += `\n\nDetails: ${evt.details}`;
+                }
+              }
+              
+              setMessages(prev => [...prev, { 
+                role: 'system', 
+                text: errorText, 
+                id: `sys-err-${Date.now()}` 
+              }]);
+              
+              // Stop processing this stream
+              break;
+            }
+            
             // Skip non-content events (state deltas, empty events, etc.)
             if (!evt?.content?.parts || !Array.isArray(evt.content.parts)) {
               continue;
@@ -196,12 +229,30 @@ export default function ChatPage() {
                 }];
               }
             });
-          } catch {}
+          } catch (parseError) {
+            // Failed to parse event JSON - log but continue
+            console.error('Failed to parse SSE event:', parseError);
+          }
         }
         buf = parts[parts.length - 1];
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'system', text: 'Error sending message.', id: `sys-err-${Date.now()}` }]);
+      // Remove loading bubble
+      if (loadingMsgId) {
+        setMessages(prev => prev.filter(m => m.id !== loadingMsgId));
+        setLoadingMsgId(null);
+      }
+      
+      // Display network/connection error
+      const errorMessage = e instanceof Error 
+        ? `❌ Connection Error\n\n${e.message}\n\nPlease check your network connection and try again.`
+        : '❌ Connection Error\n\nFailed to communicate with the agent. Please try again.';
+      
+      setMessages(prev => [...prev, { 
+        role: 'system', 
+        text: errorMessage, 
+        id: `sys-err-${Date.now()}` 
+      }]);
     } finally {
       setLoading(false);
       sendingRef.current = false;

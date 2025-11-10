@@ -15,9 +15,47 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to run agent' }), {
+      // Try to get error details from response body
+      let errorMessage = 'Failed to run agent';
+      let errorDetails = '';
+      
+      try {
+        const errorBody = await response.text();
+        if (errorBody) {
+          try {
+            const errorJson = JSON.parse(errorBody);
+            errorMessage = errorJson.message || errorJson.error || errorMessage;
+            errorDetails = errorJson.details || '';
+          } catch {
+            // Response wasn't JSON, use raw text
+            errorMessage = errorBody.substring(0, 200); // Limit length
+          }
+        }
+      } catch {}
+      
+      // Send error as SSE event so frontend can display it properly
+      const errorEvent = {
+        error: true,
         status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+        message: errorMessage,
+        details: errorDetails
+      };
+      
+      const errorStream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
+          controller.close();
+        }
+      });
+      
+      return new Response(errorStream, {
+        status: 200, // Send 200 so SSE stream is readable
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
       });
     }
 
@@ -33,6 +71,17 @@ export async function POST(request: NextRequest) {
             if (done) break;
             controller.enqueue(value);
           }
+        } catch (streamError) {
+          // Handle streaming errors (e.g., connection dropped)
+          console.error('Stream error:', streamError);
+          const encoder = new TextEncoder();
+          const errorEvent = {
+            error: true,
+            status: 500,
+            message: 'Stream connection error',
+            details: streamError instanceof Error ? streamError.message : 'Unknown error'
+          };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
         } finally {
           controller.close();
           reader.releaseLock();
@@ -49,9 +98,30 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in SSE proxy:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    
+    // Send error as SSE event
+    const errorEvent = {
+      error: true,
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      message: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    };
+    
+    const errorStream = new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
+        controller.close();
+      }
+    });
+    
+    return new Response(errorStream, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
   }
 }
