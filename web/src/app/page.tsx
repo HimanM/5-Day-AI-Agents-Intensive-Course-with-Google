@@ -103,7 +103,7 @@ export default function ChatPage() {
     setMessages(prev => [...prev, { role: 'agent', text: '', loading: true, id: tempId }]);
     setLoadingMsgId(tempId);
     
-    console.log('[SEND] Starting request for:', text);
+  // [LOG REMOVED] start request log removed for cleaner console output
     try {
       const res = await fetch(`${API_BASE}/run_sse`, {
         method: 'POST',
@@ -140,7 +140,7 @@ export default function ChatPage() {
             // IMPORTANT: Only process streaming chunks (partial=true)
             // Skip consolidated messages that have no partial flag
             if (evt.partial !== true) {
-              console.log('[SSE] Skipping non-partial consolidated event');
+              // Skip consolidated (non-partial) events during streaming
               continue;
             }
             
@@ -155,7 +155,6 @@ export default function ChatPage() {
             if (!chunk) continue;
             
             const author = evt?.author || evt?.content?.role || 'model';
-            console.log(`[SSE] Chunk from ${author}:`, chunk.substring(0, 20));
             
             // Extract grounding metadata if present (usually comes with finishReason)
             const groundingMetadata = evt?.groundingMetadata ? {
@@ -209,7 +208,7 @@ export default function ChatPage() {
       // Ensure loading bubble is removed
       setMessages(prev => prev.filter(m => !m.loading));
       setLoadingMsgId(null);
-      console.log('[SEND] Request complete');
+  // [LOG REMOVED] request complete
     }
   };
 
