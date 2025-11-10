@@ -128,7 +128,7 @@ export function Sidebar({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Demo Video
+            Pain
           </button>
           <button
             onClick={() => setActiveTab('invocations')}
