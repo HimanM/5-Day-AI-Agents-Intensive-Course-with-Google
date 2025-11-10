@@ -51,6 +51,9 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
     m.id !== dismissedErrorId &&
     /error|failed|fail(ed)?|resource exhausted|too many requests|429/i.test(m.text)
   );
+  
+  // Track the current error ID being shown to keep filtering it even after dismissal
+  const currentErrorId = errorMessage?.id || dismissedErrorId;
 
   // Auto-dismiss error banner after 10 seconds
   useEffect(() => {
@@ -82,8 +85,8 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
         <div className="max-w-4xl mx-auto p-6 space-y-3">
           {/* Chat Messages */}
           {messages
-            // remove the error message from inline rendering to avoid duplication
-            .filter(m => !(errorMessage && m.id === errorMessage.id))
+            // remove the error message from inline rendering to avoid showing it twice
+            .filter(m => !(currentErrorId && m.id === currentErrorId))
             .map((msg) => (
               <ChatMessage key={msg.id} msg={msg} />
           ))}

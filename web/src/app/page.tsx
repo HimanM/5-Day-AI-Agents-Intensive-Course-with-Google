@@ -35,6 +35,7 @@ export default function ChatPage() {
   const [connected, setConnected] = useState(false);
   const [loadingMsgId, setLoadingMsgId] = useState<string | null>(null);
   const [showAgentInfo, setShowAgentInfo] = useState(true);
+  const [traceFetchTrigger, setTraceFetchTrigger] = useState(0);
   const authorBubbles = useRef<Map<string, number>>(new Map());
   const sendingRef = useRef(false);
   const chatContainerRef = useRef<ChatContainerRef>(null);
@@ -59,11 +60,25 @@ export default function ChatPage() {
   }, []);
 
   // Handle agent change - clear chat and reset connection
-  const handleAgentChange = (newAgent: string) => {
+  const handleAgentChange = async (newAgent: string) => {
+    // Disconnect previous agent session if connected
+    if (connected && selectedAgent && sessionId) {
+      try {
+        await fetch(`${API_BASE}/apps/${selectedAgent}/users/${user}/sessions/${sessionId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        console.error('Failed to disconnect previous session:', e);
+      }
+    }
+    
     setSelectedAgent(newAgent);
     setMessages([]);
     setConnected(false);
     setShowAgentInfo(true);
+    setTraceFetchTrigger(0); // Reset trace trigger to clear invocations
+    setSessionId(`s_${Date.now()}`); // Generate new session ID for new agent
     authorBubbles.current.clear();
   };
 
@@ -97,6 +112,8 @@ export default function ChatPage() {
     
     // Clear tracking for new request
     authorBubbles.current.clear();
+    // Reset trace data for new invocation
+    setTraceFetchTrigger(0);
     
     // Show loading bubble
     const tempId = `loading_${Date.now()}`;
@@ -129,8 +146,12 @@ export default function ChatPage() {
         for (let i = 0; i < parts.length - 1; i++) {
           const line = parts[i].split('\n').find(l => l.startsWith('data: '));
           if (!line) continue;
+          
+          const dataStr = line.slice(6).trim();
+          if (!dataStr) continue;
+          
           try {
-            const evt = JSON.parse(line.slice(6));
+            const evt = JSON.parse(dataStr);
             
             // Handle error events from server
             if (evt.error === true) {
@@ -259,7 +280,9 @@ export default function ChatPage() {
       // Ensure loading bubble is removed
       setMessages(prev => prev.filter(m => !m.loading));
       setLoadingMsgId(null);
-  // [LOG REMOVED] request complete
+      // Trigger trace fetch after agent finishes responding
+      console.log('[TRACE TRIGGER] Incrementing traceFetchTrigger');
+      setTraceFetchTrigger(prev => prev + 1);
     }
   };
 
@@ -275,6 +298,7 @@ export default function ChatPage() {
         onSessionChange={setSessionId}
         connected={connected}
         onConnect={connect}
+        traceFetchTrigger={traceFetchTrigger}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden">

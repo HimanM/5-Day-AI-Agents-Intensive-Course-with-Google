@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow } from 'lucide-react';
 import { VideoPlayer } from './VideoPlayer';
+import { InvocationsViewer } from './InvocationsViewer';
 
 const AGENT_ICONS = [Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow];
 
@@ -28,6 +30,7 @@ interface SidebarProps {
   onSessionChange: (session: string) => void;
   connected: boolean;
   onConnect: () => void;
+  traceFetchTrigger: number; // Incremented when agent finishes to trigger trace fetch
 }
 
 export function Sidebar({
@@ -40,7 +43,10 @@ export function Sidebar({
   onSessionChange,
   connected,
   onConnect,
+  traceFetchTrigger,
 }: SidebarProps) {
+  const [activeTab, setActiveTab] = useState<'video' | 'invocations'>('video');
+
   return (
     <aside className="w-80 bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden">
       <div className="p-4 border-b border-sidebar-border">
@@ -110,8 +116,40 @@ export function Sidebar({
           </div>
         )}
       </div>
+      
+      {/* Tab Switcher */}
+      <div className="border-t border-sidebar-border">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('video')}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'video'
+                ? 'text-foreground border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Demo Video
+          </button>
+          <button
+            onClick={() => setActiveTab('invocations')}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'invocations'
+                ? 'text-foreground border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Invocations
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
       <div className="flex-1 p-4 overflow-hidden">
-        <VideoPlayer videoSrc="/video/demo.mp4" />
+        {activeTab === 'video' ? (
+          <VideoPlayer videoSrc="/video/demo.mp4" />
+        ) : (
+          <InvocationsViewer sessionId={sessionId} connected={connected} fetchTrigger={traceFetchTrigger} />
+        )}
       </div>
     </aside>
   );
