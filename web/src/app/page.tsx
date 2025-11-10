@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '@/components/chat/Sidebar';
-import { ChatContainer } from '@/components/chat/ChatContainer';
+import { ChatContainer, ChatContainerRef } from '@/components/chat/ChatContainer';
 import { ChatInput } from '@/components/chat/ChatInput';
 
 const API_BASE = '/api';
@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [showAgentInfo, setShowAgentInfo] = useState(true);
   const authorBubbles = useRef<Map<string, number>>(new Map());
   const sendingRef = useRef(false);
+  const chatContainerRef = useRef<ChatContainerRef>(null);
 
   // Initialize session ID on client only to avoid hydration mismatch
   useEffect(() => {

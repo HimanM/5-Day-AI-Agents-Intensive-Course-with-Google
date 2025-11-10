@@ -1,13 +1,15 @@
 import { Button } from '@/components/ui/button';
+import { ScrollToTopButton } from './ScrollToTopButton';
 
 interface ChatInputProps {
   input: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
   loading: boolean;
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function ChatInput({ input, onInputChange, onSend, loading }: ChatInputProps) {
+export function ChatInput({ input, onInputChange, onSend, loading, scrollContainerRef }: ChatInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       onSend();
@@ -15,7 +17,7 @@ export function ChatInput({ input, onInputChange, onSend, loading }: ChatInputPr
   };
 
   return (
-    <div className="border-t border-border p-4 bg-background">
+    <div className="border-t border-border p-4 bg-background relative">
       <div className="max-w-4xl mx-auto flex gap-2">
         <input
           className="flex-1 px-5 py-3.5 rounded-full bg-muted border border-input text-base focus:outline-none focus:ring-2 focus:ring-ring"
@@ -25,6 +27,7 @@ export function ChatInput({ input, onInputChange, onSend, loading }: ChatInputPr
           onKeyDown={handleKeyDown}
           disabled={loading}
         />
+        <ScrollToTopButton containerRef={scrollContainerRef} />
         <Button onClick={onSend} disabled={loading} size="icon" className="rounded-full h-14 w-14">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

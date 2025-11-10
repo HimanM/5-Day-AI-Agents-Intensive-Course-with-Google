@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { AgentInfoBox } from './AgentInfoBox';
 import { ChatMessage } from './ChatMessage';
 
@@ -17,8 +17,18 @@ interface ChatContainerProps {
   selectedAgent: string;
 }
 
-export function ChatContainer({ messages, connected, showAgentInfo, selectedAgent }: ChatContainerProps) {
+export interface ChatContainerRef {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}
+
+export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
+  ({ messages, connected, showAgentInfo, selectedAgent }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    containerRef
+  }));
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -27,7 +37,7 @@ export function ChatContainer({ messages, connected, showAgentInfo, selectedAgen
   const hasNonSystemMessages = messages.filter(m => m.role !== 'system').length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div ref={containerRef} className="flex-1 overflow-y-auto relative">
       <div className="max-w-4xl mx-auto p-6 space-y-3">
         {/* Agent Info Box - Shows when connected but no messages sent */}
         {connected && showAgentInfo && !hasNonSystemMessages && selectedAgent && (
@@ -43,4 +53,4 @@ export function ChatContainer({ messages, connected, showAgentInfo, selectedAgen
       </div>
     </div>
   );
-}
+});

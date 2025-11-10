@@ -88,9 +88,10 @@ export function Sidebar({
         <div>
           <label className="text-sm text-muted-foreground mb-1.5 block">Session</label>
           <input 
-            className="w-full px-3 py-2.5 rounded-md bg-background border border-input text-base"
+            className="w-full px-3 py-2.5 rounded-md bg-muted border border-input text-base cursor-default"
             value={sessionId}
-            onChange={e => onSessionChange(e.target.value)}
+            readOnly
+            disabled
           />
         </div>
         <div className={agents.length > 0 && !connected ? 'connect-gradient rounded-lg' : ''}>
