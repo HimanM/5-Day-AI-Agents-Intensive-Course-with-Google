@@ -38,15 +38,21 @@ Kaggle references for Day 1:
 
 ```
 Gemini/
-├─ my_agent/                  # math tools demo (add/multiply) for ADK
-├─ sequential_workflow/       # SequentialAgent: expand → draft → improve
-├─ parallel_workflow/         # ParallelAgent + synthesis; uses google_search
-├─ loop_workflow/             # LoopAgent: critique/refine with escalation
+├─ Agents/                    # ADK agent packages
+│  ├─ my_agent/               # math tools demo (add/multiply)
+│  ├─ sequential_workflow/    # SequentialAgent: expand → draft → improve
+│  ├─ parallel_workflow/      # ParallelAgent + synthesis; uses google_search
+│  └─ loop_workflow/          # LoopAgent: critique/refine with escalation
+├─ web/                       # Next.js 14 frontend (Tailwind, shadcn, SSE chat UI)
+├─ frontend/                  # Simple HTML/JS prototype (legacy)
+├─ cors_proxy.py              # FastAPI CORS proxy (dev only)
+├─ nginx.conf                 # Production reverse proxy config
 └─ README.md                  # This document
 ```
 
-- Each agent package defines a `root_agent` in `agent.py` so ADK can discover it.
+- Each agent package in `Agents/` defines a `root_agent` in `agent.py` for ADK discovery.
 - Parallel workflow includes the ADK built‑in `google_search` tool.
+- Web UI: Next.js app with Material Design-inspired styling, sidebar for agent selection + history, streaming chat.
 
 ### Running the agents (ADK)
 Prereqs (Windows):
@@ -68,26 +74,56 @@ Open the URL shown (e.g., http://127.0.0.1:8000). Select an agent in the top‑l
 If you see a Windows reload error, try:
 To restrict which agents appear, run the server from a directory containing only the desired folders. Each `agent.py` now defines an `app` object wrapping its `root_agent` for improved compatibility.
 
-### Custom minimal frontend (optional)
-We added a simple client at `frontend/index.html` that lists your agents, lets you pick one, and chat. Refreshing the page resets the chat (a new session is created when you click Connect).
+### Production Web UI (Next.js + Nginx)
+For a production-ready setup with Google Material Design styling:
 
-1) Start the API server:
+**Development:**
 ```powershell
+# Terminal 1: ADK API server (from Agents folder)
+cd Agents
 adk api_server . --port 8080
+
+# Terminal 2: Next.js dev server
+cd web
+npm install
+npm run dev
 ```
-2) Fix CORS (browser security) by running the included proxy:
+Open http://localhost:3000 (Next.js has built-in API routes that proxy to ADK at port 8080, no CORS issues).
+
+**Configuration:** Edit `web/.env.local` to change the ADK server URL (default: `http://127.0.0.1:8080`).
+
+**Production (with Nginx):**
 ```powershell
-python cors_proxy.py
+# Build Next.js static export
+cd web
+npm run build
+
+# Start ADK API server
+cd ../Agents
+adk api_server . --port 8080
+
+# Start Nginx with provided config
+# (Install Nginx, copy nginx.conf to /etc/nginx/sites-available/, symlink to sites-enabled)
+sudo nginx -c /path/to/nginx.conf
 ```
-This exposes `http://127.0.0.1:8090/api` with permissive CORS and forwards to the ADK server.
+Nginx config (`nginx.conf`):
+- Serves Next.js static build from `web/out/`
+- Proxies `/api/*` to ADK server on port 8080
+- **Allow-lists only required endpoints** (`/list-apps`, sessions, `/run`, `/run_sse`)
+- **Blocks** `/docs`, `/openapi.json`, and other ADK internals to prevent abuse
 
-3) Open the frontend file directly in your browser (double‑click `frontend/index.html`). The default server URL is set to `http://127.0.0.1:8090/api`. You can change it in the top bar if you run a different port.
+Features:
+- Material Design-inspired UI (Google fonts, rounded cards, sidebar)
+- Agent dropdown + session config in sidebar
+- Streaming chat with SSE, aggregates multi-agent responses by author
+- Click messages to expand/collapse, single-line truncation by default
 
-Notes:
-- The frontend whitelists these apps: `my_agent`, `sequential_workflow`, `parallel_workflow`, `loop_workflow`.
-- It uses `/list-apps` to populate the dropdown and `/run_sse` with `streaming: true` for live responses.
- - If you prefer not to run the proxy, serve the frontend from the same origin (port) as the API via a reverse proxy, or use a static server that injects CORS headers on responses from the API.
-adk web . --port 8000 --no-reload
+### Legacy minimal frontend (optional)
+For quick testing, `frontend/index.html` is a standalone HTML file. Requires `cors_proxy.py`:
+```powershell
+adk api_server Agents --port 8080
+python cors_proxy.py
+# Open frontend/index.html in browser
 ```
 
 ---
