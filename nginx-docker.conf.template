@@ -1,0 +1,121 @@
+# Nginx Configuration for Dockerized ADK Agents App
+# This proxies Next.js frontend and restricts ADK API endpoints
+
+upstream adk_api {
+  server agents:8080;
+}
+
+upstream nextjs_web {
+  server web:3000;
+}
+
+server {
+  listen 80;
+  server_name ${DOMAIN};
+
+  # Security headers
+  add_header X-Content-Type-Options nosniff always;
+  add_header X-Frame-Options DENY always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+  # Handle preflight requests
+  if ($request_method = 'OPTIONS') {
+    return 204;
+  }
+
+  # CORS headers for API requests
+  add_header Access-Control-Allow-Origin $http_origin always;
+  add_header Access-Control-Allow-Methods "GET, POST, DELETE, OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Content-Type, Authorization" always;
+  add_header Access-Control-Allow-Credentials true always;
+  add_header Access-Control-Max-Age 3600 always;
+
+  # Next.js static assets and pages
+  location /_next/ {
+    proxy_pass http://nextjs_web;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+  }
+
+  # Next.js app root
+  location / {
+    proxy_pass http://nextjs_web;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+  }
+
+  # ============================================================
+  # ALLOWED ADK API ENDPOINTS - Only these are accessible
+  # ============================================================
+
+  # GET /api/list-apps - List available agents
+  location = /api/list-apps {
+    proxy_pass http://adk_api/list-apps;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  # Session management: POST/GET/DELETE /api/apps/{app}/users/{user}/sessions/{session}
+  location ~ ^/api/apps/([^/]+)/users/([^/]+)/sessions/([^/]+)$ {
+    proxy_pass http://adk_api$request_uri;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  # Run single response: POST /api/run
+  location = /api/run {
+    proxy_pass http://adk_api/run;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 300s;
+  }
+
+  # Run SSE streaming: POST /api/run_sse
+  location = /api/run_sse {
+    proxy_pass http://adk_api/run_sse;
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    chunked_transfer_encoding off;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+  }
+
+  # ============================================================
+  # BLOCK ALL OTHER API ENDPOINTS
+  # This prevents access to /docs, /openapi.json, and any other
+  # undocumented or sensitive API endpoints
+  # ============================================================
+  location ^~ /api/ {
+    return 403 '{"error": "Access forbidden"}';
+    add_header Content-Type application/json always;
+  }
+
+  # Block direct access to ADK internal endpoints
+  location ~ ^/(docs|openapi\.json|redoc) {
+    return 403 '{"error": "Access forbidden"}';
+    add_header Content-Type application/json always;
+  }
+}
