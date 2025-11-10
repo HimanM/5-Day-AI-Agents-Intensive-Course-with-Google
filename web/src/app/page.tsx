@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '@/components/chat/Sidebar';
 import { ChatContainer, ChatContainerRef } from '@/components/chat/ChatContainer';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { Footer } from '@/components/chat/Footer';
 
 const API_BASE = '/api';
 
@@ -220,6 +221,8 @@ export default function ChatPage() {
           loading={loading}
           scrollContainerRef={chatContainerRef.current?.containerRef}
         />
+        
+        <Footer />
       </main>
     </div>
   );

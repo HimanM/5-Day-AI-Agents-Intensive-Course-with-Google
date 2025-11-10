@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow } from 'lucide-react';
+import { VideoPlayer } from './VideoPlayer';
 
 const AGENT_ICONS = [Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow];
 
@@ -110,8 +111,7 @@ export function Sidebar({
         )}
       </div>
       <div className="flex-1 p-4 overflow-hidden">
-        <h2 className="text-base font-medium mb-2">History</h2>
-        <div className="text-sm text-muted-foreground">Session: {sessionId}</div>
+        <VideoPlayer videoSrc="/video/demo.mp4" />
       </div>
     </aside>
   );
