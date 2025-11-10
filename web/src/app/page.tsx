@@ -206,6 +206,7 @@ export default function ChatPage() {
       
       <main className="flex-1 flex flex-col overflow-hidden">
         <ChatContainer
+          ref={chatContainerRef}
           messages={messages}
           connected={connected}
           showAgentInfo={showAgentInfo}
@@ -217,6 +218,7 @@ export default function ChatPage() {
           onInputChange={setInput}
           onSend={send}
           loading={loading}
+          scrollContainerRef={chatContainerRef.current?.containerRef}
         />
       </main>
     </div>
