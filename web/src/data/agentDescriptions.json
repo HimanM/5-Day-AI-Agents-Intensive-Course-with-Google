@@ -1,38 +1,38 @@
 {
   "my_agent": {
-    "title": "My Agent",
-    "description": "A general-purpose conversational agent designed to assist with a wide range of tasks and queries.",
+    "title": "Math Chat Agent",
+    "description": "A friendly conversational assistant powered by Gemini 2.0 Flash that can perform basic mathematical operations using specialized tools. Perfect for quick calculations and casual conversation.",
     "features": [
-      "Natural language understanding",
-      "Contextual conversations",
-      "Task assistance and guidance"
+      "Add and multiply numbers with tool support",
+      "Natural language math queries",
+      "Concise, friendly responses"
     ]
   },
   "sequential_workflow": {
-    "title": "Sequential Workflow",
-    "description": "Processes tasks in a step-by-step sequence, ensuring each step completes before moving to the next.",
+    "title": "Sequential Research Pipeline",
+    "description": "A three-stage document creation pipeline that expands topics into key points, drafts cohesive paragraphs, and improves writing quality. Each stage builds on the previous one in a linear sequence.",
     "features": [
-      "Linear task execution",
-      "Step-by-step processing",
-      "Predictable workflow order"
+      "Topic expansion into 3-5 bullet points",
+      "Natural paragraph synthesis from points",
+      "Quality critique and improvement"
     ]
   },
   "parallel_workflow": {
-    "title": "Parallel Workflow",
-    "description": "Executes multiple tasks simultaneously for faster processing and improved efficiency.",
+    "title": "Parallel Research & Synthesis",
+    "description": "Orchestrates three specialized researchers running concurrently to investigate renewable energy, electric vehicles, and carbon capture using Google Search. Results are synthesized into a comprehensive report.",
     "features": [
-      "Concurrent task execution",
-      "Optimized performance",
-      "Simultaneous processing"
+      "Concurrent research across 3 topics",
+      "Google Search integration for real-time data",
+      "Structured report synthesis with headings"
     ]
   },
   "loop_workflow": {
-    "title": "Loop Workflow",
-    "description": "Iteratively processes tasks with multiple agents collaborating in cycles until completion.",
+    "title": "Document Refinement Loop",
+    "description": "Creates an initial draft and iteratively improves it through a critic-refiner cycle. The loop continues until the document meets quality standards (up to 5 iterations) with automatic termination when complete.",
     "features": [
-      "Iterative refinement",
-      "Multi-agent collaboration",
-      "Continuous improvement"
+      "Iterative draft improvement (max 5 cycles)",
+      "Quality-based automatic termination",
+      "Critic provides targeted improvement suggestions"
     ]
   }
 }
