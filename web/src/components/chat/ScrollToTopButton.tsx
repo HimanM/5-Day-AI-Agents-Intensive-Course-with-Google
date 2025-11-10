@@ -41,10 +41,10 @@ export function ScrollToTopButton({ containerRef }: ScrollToTopButtonProps) {
     <Button
       onClick={scrollToTop}
       size="icon"
-      className="rounded-full h-14 w-14 transition-all hover:scale-110 scroll-to-top-enter bg-secondary hover:bg-secondary/80"
+      className="rounded-full h-14 w-14 transition-all hover:scale-110 scroll-to-top-enter"
       aria-label="Scroll to top"
     >
-      <ArrowUp className="w-5 h-5" />
+      <ArrowUp className="w-6 h-6" />
     </Button>
   );
 }

@@ -27,12 +27,12 @@ export function ChatInput({ input, onInputChange, onSend, loading, scrollContain
           onKeyDown={handleKeyDown}
           disabled={loading}
         />
-        <ScrollToTopButton containerRef={scrollContainerRef} />
         <Button onClick={onSend} disabled={loading} size="icon" className="rounded-full h-14 w-14">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </Button>
+        <ScrollToTopButton containerRef={scrollContainerRef} />
       </div>
     </div>
   );
