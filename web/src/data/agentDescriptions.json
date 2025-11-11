@@ -1,0 +1,59 @@
+{
+  "my_agent": {
+    "title": "Math Chat Agent",
+    "description": "A friendly conversational assistant powered by Gemini 2.0 Flash that can perform basic mathematical operations using specialized tools. Perfect for quick calculations and casual conversation.",
+    "features": [
+      "Add and multiply numbers with tool support",
+      "Natural language math queries",
+      "Concise, friendly responses"
+    ]
+  },
+  "sequential_workflow": {
+    "title": "Sequential Research Pipeline",
+    "description": "A three-stage document creation pipeline that expands topics into key points, drafts cohesive paragraphs, and improves writing quality. Each stage builds on the previous one in a linear sequence.",
+    "features": [
+      "Topic expansion into 3-5 bullet points",
+      "Natural paragraph synthesis from points",
+      "Quality critique and improvement"
+    ]
+  },
+  "parallel_workflow": {
+    "title": "Parallel Research & Synthesis",
+    "description": "Orchestrates three specialized researchers running concurrently to investigate renewable energy, electric vehicles, and carbon capture using Google Search. Results are synthesized into a comprehensive report.",
+    "features": [
+      "Concurrent research across 3 topics",
+      "Google Search integration for real-time data",
+      "Structured report synthesis with headings"
+    ]
+  },
+  "loop_workflow": {
+    "title": "Document Refinement Loop",
+    "description": "Creates an initial draft and iteratively improves it through a critic-refiner cycle. The loop continues until the document meets quality standards (up to 5 iterations) with automatic termination when complete.",
+    "features": [
+      "Iterative draft improvement (max 5 cycles)",
+      "Quality-based automatic termination",
+      "Critic provides targeted improvement suggestions"
+    ]
+  },
+  "currency_converter": {
+    "title": "Currency Converter Agent",
+    "description": "Real-time currency conversion powered by code execution. Fetches live exchange rates and performs multi-currency calculations dynamically using Python code execution in a secure sandbox.",
+    "features": [
+      "Real-time exchange rates from public APIs",
+      "Support for 150+ currency pairs (USD, EUR, GBP, JPY, INR, etc.)",
+      "Multi-currency conversion calculations",
+      "Clear formatted output with currency symbols"
+    ]
+  },
+  "mcp_generator": {
+    "title": "MCP Generator Agent",
+    "description": "Content generation using a local Model Context Protocol (MCP) server. Demonstrates MCP integration with tools for generating images, echoing text, and performing calculations using a stable local Node.js server.",
+    "features": [
+      "Local MCP server integration for stable connections",
+      "Generate tiny sample images (16x16 pixels)",
+      "Echo and manipulate text content",
+      "Perform basic arithmetic calculations",
+      "No external dependencies or hanging issues"
+    ]
+  }
+}

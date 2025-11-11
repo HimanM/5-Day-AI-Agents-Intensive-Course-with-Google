@@ -1,0 +1,16 @@
+{
+  "name": "ADK Agents",
+  "short_name": "ADK Agents",
+  "description": "AI Agent Platform powered by Google ADK",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

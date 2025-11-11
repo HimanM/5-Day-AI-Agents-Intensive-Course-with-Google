@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ADK Chat Frontend</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0b0b0b;
+      --panel: #161616;
+      --text: #eaeaea;
+      --muted: #9aa0a6;
+      --accent: #8ab4f8;
+      --border: #2a2a2a;
+    }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; gap: 12px; align-items: center; }
+    select, button, input { background: #1f1f1f; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    button { cursor: pointer; }
+    main { display: grid; grid-template-rows: 1fr auto; height: calc(100dvh - 54px); }
+    #chat { padding: 16px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 900px; padding: 10px 12px; border-radius: 10px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+  .msg.expanded { white-space: pre-wrap; overflow: visible; text-overflow: initial; }
+    .user { background: #233b5a; align-self: flex-end; }
+    .agent { background: #263238; align-self: flex-start; }
+    .sys { background: #2b2b2b; align-self: center; font-size: 12px; color: var(--muted); }
+    form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--panel); }
+    #input { flex: 1; }
+    .row { display: flex; gap: 8px; }
+    .small { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>ADK Chat</strong>
+    <div class="row">
+  <label class="small">Server</label>
+  <input id="server" value="http://127.0.0.1:8090/api" />
+    </div>
+    <div class="row">
+      <label class="small">App</label>
+      <select id="apps"></select>
+    </div>
+    <div class="row">
+      <label class="small">User</label>
+      <input id="user" value="demo" />
+    </div>
+    <div class="row">
+      <label class="small">Session</label>
+      <input id="session" value="s1" />
+    </div>
+    <button id="connect">Connect</button>
+  </header>
+  <main>
+    <div id="chat"></div>
+    <form id="composer">
+      <input id="input" placeholder="Type a message and press Enter" />
+      <button type="submit">Send</button>
+    </form>
+  </main>
+
+  <script>
+    const appsSel = document.getElementById('apps');
+    const serverEl = document.getElementById('server');
+    const userEl = document.getElementById('user');
+    const sessEl = document.getElementById('session');
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+
+    function logSys(text){
+      const d = document.createElement('div');
+      d.className = 'msg sys'; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+    }
+    function addMsg(role, text){
+      const d = document.createElement('div');
+      d.className = 'msg ' + (role==='user'?'user':'agent');
+      d.textContent = text;
+      d.dataset.full = text;
+      d.addEventListener('click', () => {
+        if(d.classList.contains('expanded')){ d.classList.remove('expanded'); d.textContent = d.dataset.full; }
+        else { d.classList.add('expanded'); d.textContent = d.dataset.full; }
+      });
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+
+    // Maintain latest bubble per author for streaming aggregation
+    const authorBubbles = new Map();
+    function appendToAuthor(author, chunk){
+      if(!chunk) return;
+      let bubble = authorBubbles.get(author);
+      if(!bubble){
+        bubble = addMsg('model', chunk);
+        bubble.dataset.author = author;
+        authorBubbles.set(author, bubble);
+      } else {
+        bubble.dataset.full += chunk;
+        if(!bubble.classList.contains('expanded')){
+          // show truncated aggregate
+          bubble.textContent = bubble.dataset.full;
+        }
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function extractAppNames(payload){
+      // Handles: ["name"], [{name:"..."}], {apps:[...]}
+      try{
+        if(Array.isArray(payload)){
+          if(payload.length===0) return [];
+          if(typeof payload[0] === 'string') return payload;
+          if(typeof payload[0] === 'object' && payload[0] !== null){
+            return payload.map(x => (x && (x.name || x.appName || x.id)) || '').filter(Boolean);
+          }
+        }
+        if(payload && Array.isArray(payload.apps)){
+          return extractAppNames(payload.apps);
+        }
+      }catch(e){ console.warn('extractAppNames error', e); }
+      return [];
+    }
+
+    async function loadApps(){
+      try{
+        const base = serverEl.value.replace(/\/$/,'');
+        const res = await fetch(base + '/list-apps');
+        if(!res.ok){
+          logSys('Failed to load apps: ' + res.status + ' ' + res.statusText);
+          return;
+        }
+        const raw = await res.json();
+        console.log('list-apps raw result:', raw);
+        const names = extractAppNames(raw).map(x => String(x).trim());
+        logSys('Apps from server: ' + (names.join(', ') || '(none)'));
+        // Optional: restrict to our known set, but gracefully fall back if empty
+        const allow = new Set(['my_agent','sequential_workflow','parallel_workflow','loop_workflow']);
+        let filtered = names.filter(a => allow.has(a));
+        if(filtered.length === 0){
+          // fallback: include all non-temp entries
+          filtered = names.filter(a => a && !a.startsWith('__'));
+        }
+        // Clear and populate
+        appsSel.innerHTML = '';
+        filtered.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a; opt.textContent = a; appsSel.appendChild(opt);
+        });
+        if(appsSel.options.length===0){
+          logSys('No apps available from server.');
+          document.getElementById('connect').disabled = true;
+        } else {
+          document.getElementById('connect').disabled = false;
+          appsSel.selectedIndex = 0;
+        }
+      }catch(e){
+        console.error(e);
+        logSys('Failed to load apps. Check server or CORS. If loading this page from file://, try a local static server.');
+      }
+    }
+
+    async function ensureSession(){
+      const base = serverEl.value.replace(/\/$/,'');
+      const app = appsSel.value; const user = userEl.value; const sid = sessEl.value;
+      await fetch(`${base}/apps/${encodeURIComponent(app)}/users/${encodeURIComponent(user)}/sessions/${encodeURIComponent(sid)}`,
+        { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ createdAt: Date.now() }) });
+    }
+
+    async function sendText(text){
+      addMsg('user', text);
+      const base = serverEl.value.replace(/\/$/,'');
+      const app = appsSel.value; const user = userEl.value; const sid = sessEl.value;
+      const body = { app_name: app, user_id: user, session_id: sid, new_message: { role:'user', parts:[{text}] }, streaming: true };
+      const res = await fetch(base + '/run_sse', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+      });
+      if(!res.ok){ logSys('Run failed: '+res.statusText); return; }
+      const reader = res.body.getReader(); const decoder = new TextDecoder();
+      let buf='';
+      while(true){
+        const {value, done} = await reader.read(); if(done) break; buf += decoder.decode(value, {stream:true});
+        // Parse SSE: lines starting with 'data: '
+        const parts = buf.split('\n\n');
+        for(let i=0;i<parts.length-1;i++){
+          const block = parts[i];
+          const line = block.split('\n').find(l=>l.startsWith('data: '));
+          if(!line) continue; const json = line.slice(6);
+          try{
+            const evt = JSON.parse(json);
+            // Render minimal: model text chunks from evt.content.parts[].text
+            if(evt && evt.content && Array.isArray(evt.content.parts)){
+              const txts = evt.content.parts.filter(p=>typeof p.text==='string').map(p=>p.text).join('');
+              if(txts){ appendToAuthor(evt.author || 'model', txts); }
+            }
+          }catch(e){}
+        }
+        buf = parts[parts.length-1];
+      }
+    }
+
+    document.getElementById('connect').addEventListener('click', async ()=>{
+      chat.innerHTML='';
+      logSys('Connecting...');
+      await ensureSession();
+      logSys('Connected. Session ready.');
+    });
+
+    document.getElementById('composer').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const t = input.value.trim(); if(!t) return; input.value='';
+      await sendText(t);
+    });
+
+    // On page load, fetch apps and reset chat (new session will be created when Connect is clicked)
+    loadApps();
+  </script>
+</body>
+</html>

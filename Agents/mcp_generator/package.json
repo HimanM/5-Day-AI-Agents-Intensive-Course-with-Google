@@ -1,0 +1,8 @@
+
+{
+	"name": "simple-mcp-server",
+	"version": "1.0.0",
+	"type": "module",
+	"description": "Local MCP server used by mcp_generator agent",
+	"license": "MIT"
+}

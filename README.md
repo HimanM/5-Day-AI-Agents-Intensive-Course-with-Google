@@ -8,6 +8,37 @@ A quick thanks to the Kaggle team and presenters — this is shaping up to be a 
 
 ---
 
+## Day 2 — 2025-11-11
+
+Today I followed the Kaggle Day 2 materials focused on agent tools and best practices. The official notebooks we used as reference are:
+
+- Day 2a — Agent tools: https://www.kaggle.com/code/kaggle5daysofai/day-2a-agent-tools
+- Day 2b — Agent tools & best practices: https://www.kaggle.com/code/kaggle5daysofai/day-2b-agent-tools-best-practices
+
+Summary of the notebooks (high level)
+- Day 2a walks through practical agent tool patterns: defining simple tools, exposing them via the ADK tool API, and wiring agents to call tools during generation. It covers I/O shapes for tool responses (text, structured data, and binary payloads encoded as base64) and shows example tools like "echo", arithmetic helpers, and small content servers.
+- Day 2b focuses on best practices: robust streaming, handling tool-generated structured parts (text vs. images), sanitizing data URLs, and safe rendering in frontends. It also covers stable local development patterns (run tool servers locally instead of relying on npx remote scripts) and defensive SSE parsing on the client.
+
+What we implemented today in this repo
+- `Agents/currency_converter` — Currency conversion agent (tool & code-execution hybrid)
+  - Purpose: Demonstrates a multi-agent pattern where one agent fetches exchange-rate data (using `google_search`) and a separate agent is used as a code-execution tool to run Python that computes the final converted amount.
+  - Implementation details:
+    - `currency_fetcher_agent` — an LlmAgent that uses the ADK `google_search` tool to obtain up-to-date exchange rate information and returns structured rate data.
+    - `calculation_agent` — an LlmAgent configured to ONLY emit Python code; it is wired with `BuiltInCodeExecutor()` so that its generated code is executed safely and its stdout is captured as the calculation result.
+    - `currency_converter_agent` (root agent) — composes the two agents above by wrapping them as `AgentTool(agent=...)` instances. The root agent calls the fetcher to obtain rates and then invokes the code-execution agent to perform the numeric conversion.
+  - Key files: `Agents/currency_converter/agent.py` (defines `currency_fetcher_agent`, `calculation_agent` with `BuiltInCodeExecutor()`, and the `currency_converter_agent` that uses both as tools).
+  - Notes: This pattern (agents-as-tools + code execution) is useful when you want the LLM to generate code for precise numeric tasks while still grounding lookups in search results. It also separates concerns (data retrieval vs. deterministic computation).
+
+- `Agents/mcp_generator` — MCP (Model Context Protocol) generator agent
+  - Purpose: Demonstrates using MCP tools to generate content (tiny images, echo text, and numeric operations) and integrating a local MCP server for stability on Windows.
+  - Key files:
+    - `Agents/mcp_generator/agent.py` — ADK agent that configures a McpToolset using stdio connection params; the agent computes the script path at runtime so it can spawn the local server reliably.
+    - `Agents/mcp_generator/simple_mcp_server.js` — Local Node.js MCP server implementing `getTinyImage`, `echo`, and `addNumbers` tools. Runs as an stdio-based MCP server for local development without npx.
+    - `Agents/mcp_generator/package.json` — sets `type: "module"` so the local server runs as ESM.
+  - Frontend integration: The web UI was updated to parse MCP `functionResponse` parts (including nested image parts), sanitize base64 payloads, and render images inline in the chat safely (no ERR_INVALID_URL).
+
+
+
 ## Today’s Learnings (Day 1 — 2025‑11‑10)
 
 Focus: Agent architectures and workflow orchestration with ADK, grounded in Kaggle’s Day 1 materials and the ADK documentation.
@@ -38,15 +69,23 @@ Kaggle references for Day 1:
 
 ```
 Gemini/
-├─ my_agent/                  # math tools demo (add/multiply) for ADK
-├─ sequential_workflow/       # SequentialAgent: expand → draft → improve
-├─ parallel_workflow/         # ParallelAgent + synthesis; uses google_search
-├─ loop_workflow/             # LoopAgent: critique/refine with escalation
+├─ Agents/                    # ADK agent packages
+│  ├─ my_agent/               # math tools demo (add/multiply)
+│  ├─ sequential_workflow/    # SequentialAgent: expand → draft → improve
+│  ├─ parallel_workflow/      # ParallelAgent + synthesis; uses google_search
+│  ├─ loop_workflow/          # LoopAgent: critique/refine with escalation
+│  ├─ currency_converter/     # Currency conversion (google_search + code execution)
+│  └─ mcp_generator/          # MCP demo: local MCP server + tools (images, echo, add)
+├─ web/                       # Next.js 14 frontend (Tailwind, shadcn, SSE chat UI)
+├─ frontend/                  # Simple HTML/JS prototype (legacy)
+├─ cors_proxy.py              # FastAPI CORS proxy (dev only)
+├─ nginx.conf                 # Production reverse proxy config
 └─ README.md                  # This document
 ```
 
-- Each agent package defines a `root_agent` in `agent.py` so ADK can discover it.
+- Each agent package in `Agents/` defines a `root_agent` in `agent.py` for ADK discovery.
 - Parallel workflow includes the ADK built‑in `google_search` tool.
+- Web UI: Next.js app with Material Design-inspired styling, sidebar for agent selection + history, streaming chat.
 
 ### Running the agents (ADK)
 Prereqs (Windows):
@@ -59,14 +98,65 @@ Launch web UI from the parent directory that contains the agent folders:
 adk web . --port 8000
 ```
 Open the URL shown (e.g., http://127.0.0.1:8000). Select an agent in the top‑left dropdown:
-- `sequential_workflow`
-- `parallel_workflow` (shows Search grounding behavior)
-- `loop_workflow`
-- `my_agent`
+Open the URL shown (e.g., http://127.0.0.1:8000). Select an agent in the top‑left dropdown:
+ - `sequential_workflow`
+ - `parallel_workflow` (shows Search grounding behavior)
+ - `loop_workflow`
+ - `my_agent`
 
 If you see a Windows reload error, try:
+To restrict which agents appear, run the server from a directory containing only the desired folders. Each `agent.py` now defines an `app` object wrapping its `root_agent` for improved compatibility.
+
+### Production Web UI (Next.js + Nginx)
+For a production-ready setup with Google Material Design styling:
+
+**Development:**
 ```powershell
-adk web . --port 8000 --no-reload
+# Terminal 1: ADK API server (from Agents folder)
+cd Agents
+adk api_server . --port 8080
+
+# Terminal 2: Next.js dev server
+cd web
+npm install
+npm run dev
+```
+Open http://localhost:3000 (Next.js has built-in API routes that proxy to ADK at port 8080, no CORS issues).
+
+**Configuration:** Edit `web/.env.local` to change the ADK server URL (default: `http://127.0.0.1:8080`).
+
+**Production (with Nginx):**
+```powershell
+# Build Next.js static export
+cd web
+npm run build
+
+# Start ADK API server
+cd ../Agents
+adk api_server . --port 8080
+
+# Start Nginx with provided config
+# (Install Nginx, copy nginx.conf to /etc/nginx/sites-available/, symlink to sites-enabled)
+sudo nginx -c /path/to/nginx.conf
+```
+Nginx config (`nginx.conf`):
+- Serves Next.js static build from `web/out/`
+- Proxies `/api/*` to ADK server on port 8080
+- **Allow-lists only required endpoints** (`/list-apps`, sessions, `/run`, `/run_sse`)
+- **Blocks** `/docs`, `/openapi.json`, and other ADK internals to prevent abuse
+
+Features:
+- Material Design-inspired UI (Google fonts, rounded cards, sidebar)
+- Agent dropdown + session config in sidebar
+- Streaming chat with SSE, aggregates multi-agent responses by author
+- Click messages to expand/collapse, single-line truncation by default
+
+### Legacy minimal frontend (optional)
+For quick testing, `frontend/index.html` is a standalone HTML file. Requires `cors_proxy.py`:
+```powershell
+adk api_server Agents --port 8080
+python cors_proxy.py
+# Open frontend/index.html in browser
 ```
 
 ---
@@ -78,9 +168,11 @@ adk web . --port 8000 --no-reload
 
 ---
 
-## Plan for the week (placeholders)
-- Day 1 (today) — Agent architectures and ADK workflows ✅
-- Day 2 (tomorrow) — TODO (will update after the session)
+-## Plan for the week (placeholders)
+- Day 1 — Agent architectures and ADK workflows ✅
+- Day 2 — Agent tools & best practices ✅
+  - Covered: defining and wiring tools, agents-as-tools patterns, local MCP servers, safe SSE handling, and frontend image rendering.
+  - Implemented in repo: `Agents/currency_converter` (google_search + BuiltInCodeExecutor) and `Agents/mcp_generator` (local MCP server + getTinyImage/echo/addNumbers tools).
 - Day 3 — TODO
 - Day 4 — TODO
 - Day 5 — TODO (Capstone planning and build)
