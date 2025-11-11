@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 const AGENT_ICONS = [Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow];
 
@@ -119,51 +120,127 @@ export function ChatMessage({ msg }: ChatMessageProps) {
               </div>
             )}
             {/**
-             * Render message content. The agent may embed <img src="data:..."> HTML.
-             * Instead of using dangerouslySetInnerHTML (which causes the browser to
-             * attempt to load possibly malformed data URLs), parse any data-URL
-             * images and render them as React <img> elements while preserving text.
+             * Render message content with markdown support.
+             * The agent may embed <img src="data:..."> HTML or use markdown formatting.
+             * Parse images separately and render text as markdown.
              */}
             {(() => {
               const text = msg.text || '';
-              if (!text.includes('<img')) return text;
+              
+              // Check for embedded data URL images
+              if (text.includes('<img')) {
+                const nodes: React.ReactNode[] = [];
+                const imgRegex = /<img\s+[^>]*src=(?:"|')data:([^;]+);base64,([^"']+)(?:"|')[^>]*>/g;
+                let lastIndex = 0;
+                let match: RegExpExecArray | null;
 
-              const nodes: React.ReactNode[] = [];
-              const imgRegex = /<img\s+[^>]*src=(?:"|')data:([^;]+);base64,([^"']+)(?:"|')[^>]*>/g;
-              let lastIndex = 0;
-              let match: RegExpExecArray | null;
+                while ((match = imgRegex.exec(text)) !== null) {
+                  const matchStart = match.index;
+                  // push preceding text with markdown
+                  if (matchStart > lastIndex) {
+                    const preceding = text.slice(lastIndex, matchStart);
+                    nodes.push(
+                      <div key={`md-${lastIndex}`} className="markdown-content">
+                        <ReactMarkdown
+                          components={{
+                            // Style markdown elements
+                            p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
+                            code: ({children, className}) => 
+                              className ? 
+                                <code className="block bg-black/10 dark:bg-white/10 p-3 rounded-lg my-2 overflow-x-auto">{children}</code> :
+                                <code className="bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded text-sm">{children}</code>,
+                            pre: ({children}) => <pre className="my-2">{children}</pre>,
+                            ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                            ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                            li: ({children}) => <li className="ml-2">{children}</li>,
+                            strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                            em: ({children}) => <em className="italic">{children}</em>,
+                            h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-3 first:mt-0">{children}</h1>,
+                            h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
+                            h3: ({children}) => <h3 className="text-base font-bold mb-1 mt-2 first:mt-0">{children}</h3>,
+                          }}
+                        >
+                          {preceding}
+                        </ReactMarkdown>
+                      </div>
+                    );
+                  }
 
-              while ((match = imgRegex.exec(text)) !== null) {
-                const matchStart = match.index;
-                // push preceding text
-                if (matchStart > lastIndex) {
-                  const preceding = text.slice(lastIndex, matchStart);
-                  nodes.push(preceding);
+                  const mime = match[1] || 'image/png';
+                  // Remove any whitespace/newlines that could corrupt the data URL
+                  const rawBase64 = (match[2] || '').replace(/\s+/g, '');
+                  const src = `data:${mime};base64,${rawBase64}`;
+
+                  nodes.push(
+                    <img
+                      key={`img-${lastIndex}-${imgRegex.lastIndex}`}
+                      src={src}
+                      alt="Generated image"
+                      style={{ maxWidth: 300, maxHeight: 300, borderRadius: 8, margin: '8px 0', display: 'block' }}
+                    />
+                  );
+
+                  lastIndex = imgRegex.lastIndex;
                 }
 
-                const mime = match[1] || 'image/png';
-                // Remove any whitespace/newlines that could corrupt the data URL
-                const rawBase64 = (match[2] || '').replace(/\s+/g, '');
-                const src = `data:${mime};base64,${rawBase64}`;
+                // push remaining text with markdown
+                if (lastIndex < text.length) {
+                  nodes.push(
+                    <div key={`md-${lastIndex}`} className="markdown-content">
+                      <ReactMarkdown
+                        components={{
+                          // Style markdown elements
+                          p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
+                          code: ({children, className}) => 
+                            className ? 
+                              <code className="block bg-black/10 dark:bg-white/10 p-3 rounded-lg my-2 overflow-x-auto">{children}</code> :
+                              <code className="bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded text-sm">{children}</code>,
+                          pre: ({children}) => <pre className="my-2">{children}</pre>,
+                          ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                          ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                          li: ({children}) => <li className="ml-2">{children}</li>,
+                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                          em: ({children}) => <em className="italic">{children}</em>,
+                          h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-3 first:mt-0">{children}</h1>,
+                          h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
+                          h3: ({children}) => <h3 className="text-base font-bold mb-1 mt-2 first:mt-0">{children}</h3>,
+                        }}
+                      >
+                        {text.slice(lastIndex)}
+                      </ReactMarkdown>
+                    </div>
+                  );
+                }
 
-                nodes.push(
-                  <img
-                    key={`img-${lastIndex}-${imgRegex.lastIndex}`}
-                    src={src}
-                    alt="Generated image"
-                    style={{ maxWidth: 300, maxHeight: 300, borderRadius: 8, margin: '8px 0', display: 'block' }}
-                  />
-                );
-
-                lastIndex = imgRegex.lastIndex;
+                return <div>{nodes}</div>;
               }
-
-              // push remaining text
-              if (lastIndex < text.length) {
-                nodes.push(text.slice(lastIndex));
-              }
-
-              return <div>{nodes}</div>;
+              
+              // No images, just render markdown
+              return (
+                <div className="markdown-content">
+                  <ReactMarkdown
+                    components={{
+                      // Style markdown elements
+                      p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
+                      code: ({children, className}) => 
+                        className ? 
+                          <code className="block bg-black/10 dark:bg-white/10 p-3 rounded-lg my-2 overflow-x-auto">{children}</code> :
+                          <code className="bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded text-sm">{children}</code>,
+                      pre: ({children}) => <pre className="my-2">{children}</pre>,
+                      ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                      ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                      li: ({children}) => <li className="ml-2">{children}</li>,
+                      strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                      em: ({children}) => <em className="italic">{children}</em>,
+                      h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-3 first:mt-0">{children}</h1>,
+                      h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
+                      h3: ({children}) => <h3 className="text-base font-bold mb-1 mt-2 first:mt-0">{children}</h3>,
+                    }}
+                  >
+                    {text}
+                  </ReactMarkdown>
+                </div>
+              );
             })()}
             {msg.groundingMetadata && <GoogleSearchDisplay metadata={msg.groundingMetadata} />}
           </>

@@ -30,6 +30,7 @@ interface SidebarProps {
   onSessionChange: (session: string) => void;
   connected: boolean;
   onConnect: () => void;
+  onRefresh: () => void; // Refresh session (new session ID, clear chat, auto-reconnect)
   traceFetchTrigger: number; // Incremented when agent finishes to trigger trace fetch
 }
 
@@ -43,6 +44,7 @@ export function Sidebar({
   onSessionChange,
   connected,
   onConnect,
+  onRefresh,
   traceFetchTrigger,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<'video' | 'invocations'>('video');
@@ -101,14 +103,27 @@ export function Sidebar({
             disabled
           />
         </div>
-        <div className={agents.length > 0 && !connected ? 'connect-gradient rounded-lg' : ''}>
-          <Button 
-            onClick={onConnect} 
-            className="w-full text-base py-6 rounded-lg"
-            disabled={connected || !selectedAgent || !user || !sessionId}
-          >
-            {connected ? 'Connected' : (agents.length > 0 ? 'Connect to Agent' : 'Loading...')}
-          </Button>
+        <div className="flex gap-2 items-stretch">
+          <div className={`flex-1 ${agents.length > 0 && !connected ? 'connect-gradient rounded-lg' : ''}`}>
+            <Button 
+              onClick={onConnect} 
+              className="w-full text-base py-6 rounded-lg"
+              disabled={connected || !selectedAgent || !user || !sessionId}
+            >
+              {connected ? 'Connected' : (agents.length > 0 ? 'Connect to Agent' : 'Loading...')}
+            </Button>
+          </div>
+          {connected && (
+            <div className="connect-gradient rounded-lg content-center">
+              <Button
+                onClick={onRefresh}
+                className="px-4 rounded-lg"
+                title="Refresh with new session"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
         {!connected && (
           <div className="text-xs mt-1.5 text-muted-foreground opacity-80 text-center">

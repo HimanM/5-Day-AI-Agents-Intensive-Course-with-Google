@@ -6,6 +6,11 @@
       "Add and multiply numbers with tool support",
       "Natural language math queries",
       "Concise, friendly responses"
+    ],
+    "exampleUsage": [
+      "What is 15 plus 27?",
+      "Multiply 8 by 12",
+      "Add 45.5 and 32.3, then multiply the result by 2"
     ]
   },
   "sequential_workflow": {
@@ -15,6 +20,11 @@
       "Topic expansion into 3-5 bullet points",
       "Natural paragraph synthesis from points",
       "Quality critique and improvement"
+    ],
+    "exampleUsage": [
+      "Write about artificial intelligence",
+      "Create content about sustainable agriculture",
+      "Explain quantum computing"
     ]
   },
   "parallel_workflow": {
@@ -24,6 +34,11 @@
       "Concurrent research across 3 topics",
       "Google Search integration for real-time data",
       "Structured report synthesis with headings"
+    ],
+    "exampleUsage": [
+      "Research the latest developments in clean energy",
+      "Give me a report on sustainability technologies",
+      "What are the current trends in environmental tech?"
     ]
   },
   "loop_workflow": {
@@ -33,6 +48,11 @@
       "Iterative draft improvement (max 5 cycles)",
       "Quality-based automatic termination",
       "Critic provides targeted improvement suggestions"
+    ],
+    "exampleUsage": [
+      "Write a refined overview about machine learning",
+      "Create a polished description of blockchain technology",
+      "Draft and improve an explanation of neural networks"
     ]
   },
   "currency_converter": {
@@ -43,6 +63,12 @@
       "Support for 150+ currency pairs (USD, EUR, GBP, JPY, INR, etc.)",
       "Multi-currency conversion calculations",
       "Clear formatted output with currency symbols"
+    ],
+    "exampleUsage": [
+      "Convert 100 USD to EUR",
+      "What is 50 GBP in Japanese Yen?",
+      "Convert 1000 INR to USD",
+      "How much is 250 EUR in British Pounds?"
     ]
   },
   "mcp_generator": {
@@ -54,6 +80,50 @@
       "Echo and manipulate text content",
       "Perform basic arithmetic calculations",
       "No external dependencies or hanging issues"
+    ],
+    "exampleUsage": [
+      "Generate a sample image",
+      "Echo 'Hello World'",
+      "Add 15 and 27 using MCP tools",
+      "Create a tiny test image"
+    ]
+  },
+  "session_demo": {
+    "title": "Session State Manager",
+    "description": "Demonstrates session state management with persistent storage using TinyDB. Tracks user preferences and conversation context across interactions with backend data exposure for frontend visualization.",
+    "features": [
+      "Save and retrieve user preferences (name, country, favorites)",
+      "Persistent storage using TinyDB",
+      "Session state management across conversations",
+      "Backend data exposure via BACKEND_PROCESSES format",
+      "Real-time state synchronization"
+    ],
+    "exampleUsage": [
+      "My name is Sarah and I'm from Canada",
+      "What's my name?",
+      "I love blue color and pizza",
+      "Show me the session state data",
+      "What preferences do you know about me?"
+    ]
+  },
+  "memory_demo": {
+    "title": "Long-Term Memory Agent",
+    "description": "Long-term memory storage and retrieval system using TinyDB. Stores facts, preferences, and personal information with categorization and search capabilities. Perfect for building personalized AI assistants.",
+    "features": [
+      "Save memories with categories (personal, preferences, facts, goals)",
+      "Search memories by content or category",
+      "List and filter all stored memories",
+      "Delete specific memories",
+      "Backend memory data exposure for UI visualization",
+      "Recent memory tracking and statistics"
+    ],
+    "exampleUsage": [
+      "My birthday is March 15th",
+      "Remember that I love playing guitar",
+      "I'm allergic to peanuts",
+      "What do you remember about my hobbies?",
+      "Show me all my memories",
+      "Search for memories about food"
     ]
   }
 }
