@@ -9,3 +9,5 @@ __pycache__/
 TODO
 .TODO
 /idk.json
+/Agents/mcp_generator/node_modules
+/frontend

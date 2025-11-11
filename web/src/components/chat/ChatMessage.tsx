@@ -1,3 +1,4 @@
+import React from 'react';
 import { Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow } from 'lucide-react';
 
 const AGENT_ICONS = [Bot, Zap, Users, RefreshCw, Sparkles, Brain, MessageSquare, Cpu, Globe, Workflow];
@@ -117,7 +118,53 @@ export function ChatMessage({ msg }: ChatMessageProps) {
                 <span className="text-xs font-medium opacity-60">{formatAgentName(msg.author)}</span>
               </div>
             )}
-            {msg.text}
+            {/**
+             * Render message content. The agent may embed <img src="data:..."> HTML.
+             * Instead of using dangerouslySetInnerHTML (which causes the browser to
+             * attempt to load possibly malformed data URLs), parse any data-URL
+             * images and render them as React <img> elements while preserving text.
+             */}
+            {(() => {
+              const text = msg.text || '';
+              if (!text.includes('<img')) return text;
+
+              const nodes: React.ReactNode[] = [];
+              const imgRegex = /<img\s+[^>]*src=(?:"|')data:([^;]+);base64,([^"']+)(?:"|')[^>]*>/g;
+              let lastIndex = 0;
+              let match: RegExpExecArray | null;
+
+              while ((match = imgRegex.exec(text)) !== null) {
+                const matchStart = match.index;
+                // push preceding text
+                if (matchStart > lastIndex) {
+                  const preceding = text.slice(lastIndex, matchStart);
+                  nodes.push(preceding);
+                }
+
+                const mime = match[1] || 'image/png';
+                // Remove any whitespace/newlines that could corrupt the data URL
+                const rawBase64 = (match[2] || '').replace(/\s+/g, '');
+                const src = `data:${mime};base64,${rawBase64}`;
+
+                nodes.push(
+                  <img
+                    key={`img-${lastIndex}-${imgRegex.lastIndex}`}
+                    src={src}
+                    alt="Generated image"
+                    style={{ maxWidth: 300, maxHeight: 300, borderRadius: 8, margin: '8px 0', display: 'block' }}
+                  />
+                );
+
+                lastIndex = imgRegex.lastIndex;
+              }
+
+              // push remaining text
+              if (lastIndex < text.length) {
+                nodes.push(text.slice(lastIndex));
+              }
+
+              return <div>{nodes}</div>;
+            })()}
             {msg.groundingMetadata && <GoogleSearchDisplay metadata={msg.groundingMetadata} />}
           </>
         )}

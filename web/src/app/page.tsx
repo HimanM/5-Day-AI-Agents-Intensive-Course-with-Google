@@ -50,7 +50,7 @@ export default function ChatPage() {
     fetch(`${API_BASE}/list-apps`)
       .then(r => r.json())
       .then((apps: string[]) => {
-        const allowed = ['my_agent', 'sequential_workflow', 'parallel_workflow', 'loop_workflow', 'currency_converter'];
+        const allowed = ['my_agent', 'sequential_workflow', 'parallel_workflow', 'loop_workflow', 'currency_converter', 'mcp_generator'];
         const filtered = apps.filter(a => allowed.includes(a));
         const agentList = filtered.length ? filtered : apps.filter(a => !a.startsWith('__'));
         setAgents(agentList);
@@ -149,39 +149,114 @@ export default function ChatPage() {
           
           const dataStr = line.slice(6).trim();
           if (!dataStr) continue;
-          
+
+          // If the server for some reason emits a raw data: URL (e.g. "data:image/.."),
+          // handle it directly instead of trying to JSON.parse it.
+          if (dataStr.startsWith('data:')) {
+            // Sanitize base64 payload (remove whitespace/newlines) to avoid ERR_INVALID_URL
+            const sanitizedUrl = dataStr.replace(/\s+/g, '');
+            // Remove loading bubble
+            if (loadingMsgId) {
+              setMessages(prev => prev.filter(m => m.id !== loadingMsgId));
+              setLoadingMsgId(null);
+            }
+
+            const author = 'model';
+            const chunk = `<img src="${sanitizedUrl}" alt="Generated image" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin: 8px 0;" />`;
+
+            // Merge or append like other chunks
+            setMessages(prev => {
+              const trackedIdx = authorBubbles.current.get(author);
+              if (trackedIdx !== undefined && trackedIdx < prev.length && prev[trackedIdx].author === author) {
+                const updated = [...prev];
+                updated[trackedIdx] = { ...updated[trackedIdx], text: (updated[trackedIdx].text || '') + chunk };
+                return updated;
+              } else {
+                const newIdx = prev.length;
+                const newMsgId = `agent-${author}-${Date.now()}-${newIdx}`;
+                authorBubbles.current.set(author, newIdx);
+                return [...prev, { role: 'agent', text: chunk, author, id: newMsgId }];
+              }
+            });
+
+            continue;
+          }
+
+          // Quick guard: only attempt JSON.parse if it looks like JSON
+          if (dataStr[0] !== '{' && dataStr[0] !== '[') {
+            // Not JSON; ignore noisy/non-JSON SSE lines
+            continue;
+          }
+
           try {
             const evt = JSON.parse(dataStr);
             
-            // Handle error events from server
-            if (evt.error === true) {
+            // Handle error events from server (evt.error may be boolean, string, or object)
+            if (evt.error) {
               // Remove loading bubble
               if (loadingMsgId) {
                 setMessages(prev => prev.filter(m => m.id !== loadingMsgId));
                 setLoadingMsgId(null);
               }
-              
-              // Format user-friendly error message
-              let errorText = 'An error occurred';
-              if (evt.status === 429) {
-                errorText = '⚠️ Rate Limit Reached\n\nThe API rate limit has been exceeded. Please wait a moment and try again.\n\nIf this persists, check your Google Cloud quota settings.';
-              } else if (evt.status === 401 || evt.status === 403) {
-                errorText = '🔒 Authentication Error\n\nAPI key is invalid or missing. Please check your environment variables.';
-              } else if (evt.status === 500) {
-                errorText = '❌ Server Error\n\nThe agent encountered an internal error. Please try again or select a different agent.';
-              } else if (evt.message) {
-                errorText = `❌ Error (${evt.status || 'Unknown'})\n\n${evt.message}`;
-                if (evt.details) {
-                  errorText += `\n\nDetails: ${evt.details}`;
+
+              // Helper to extract a readable error message from messy server payloads
+              const formatServerError = (raw: any) => {
+                // If server provided structured status, prefer that
+                if (evt.status === 429 || /429|Too Many Requests/i.test(String(raw))) {
+                  return '⚠️ Rate Limit Reached\n\nThe API rate limit has been exceeded. Please wait a moment and try again.\n\nIf this persists, check your Google Cloud quota settings.';
                 }
-              }
-              
-              setMessages(prev => [...prev, { 
-                role: 'system', 
-                text: errorText, 
-                id: `sys-err-${Date.now()}` 
+
+                // If raw is an object, try to use its message fields
+                if (raw && typeof raw === 'object') {
+                  if (raw.message) return `❌ Error\n\n${String(raw.message)}`;
+                  try { return `❌ Error\n\n${JSON.stringify(raw, null, 2)}`; } catch (e) { return String(raw); }
+                }
+
+                // If raw is a string, try to find nested JSON and extract meaningful bits
+                if (typeof raw === 'string') {
+                  // Quick patterns for common cases
+                  if (/Too Many Requests|RESOURCE_EXHAUSTED|429/.test(raw)) {
+                    return '⚠️ Rate Limit Reached\n\nThe API rate limit has been exceeded. Please wait a moment and try again.\n\nIf this persists, check your Google Cloud quota settings.';
+                  }
+
+                  // Try to extract the first JSON-looking substring
+                  const m = raw.match(/\{[\s\S]*\}/);
+                  if (m) {
+                    const jsonStr = m[0];
+                    try {
+                      const parsed = JSON.parse(jsonStr);
+                      // If nested message field contains another JSON string, try to parse it
+                      if (parsed?.error) {
+                        try {
+                          return `❌ Error\n\n${JSON.stringify(parsed.error, null, 2)}`;
+                        } catch (e) {
+                          return `❌ Error\n\n${String(parsed.error)}`;
+                        }
+                      }
+                      if (parsed?.message) return `❌ Error\n\n${String(parsed.message)}`;
+                      return `❌ Error\n\n${JSON.stringify(parsed, null, 2)}`;
+                    } catch (e) {
+                      // Not valid JSON - fall back to presenting cleaned string
+                      const cleaned = raw.replace(/\s+/g, ' ');
+                      return `❌ Error\n\n${cleaned}`;
+                    }
+                  }
+
+                  // Fallback: return the raw string
+                  return `❌ Error\n\n${raw}`;
+                }
+
+                return '❌ Error\n\nAn unknown error occurred.';
+              };
+
+              const errorText = formatServerError(evt.error || evt.message || evt);
+
+              setMessages(prev => [...prev, {
+                role: 'system',
+                text: errorText,
+                id: `sys-err-${Date.now()}`
               }]);
-              
+
               // Stop processing this stream
               break;
             }
@@ -191,19 +266,53 @@ export default function ChatPage() {
               continue;
             }
             
-            // IMPORTANT: Only process streaming chunks (partial=true)
-            // Skip consolidated messages that have no partial flag
-            if (evt.partial !== true) {
-              // Skip consolidated (non-partial) events during streaming
+            // IMPORTANT: Prefer streaming chunks (partial=true) but also
+            // accept non-partial events if they contain image/functionResponse
+            const isPartial = evt.partial === true;
+            const hasImagePart = Array.isArray(evt.content.parts) && evt.content.parts.some((p: any) => {
+              if (!p) return false;
+              if (p.type === 'image') return true;
+              // functionResponse may carry nested content with images
+              if (p.functionResponse && Array.isArray(p.functionResponse.response?.content)) {
+                return p.functionResponse.response.content.some((inner: any) => inner?.type === 'image');
+              }
+              return false;
+            });
+
+            if (!isPartial && !hasImagePart) {
+              // Skip consolidated (non-partial) events that do not contain images
               continue;
             }
             
             // Process all partial events INCLUDING those with finishReason
             // (finishReason events contain the last chunk of text)
             
-            // Extract text from partial chunk
+            // Extract text and images from partial or image-containing chunk
             const chunk = evt.content.parts
-              .map((p: any) => (p && typeof p === 'object' && typeof p.text === 'string') ? p.text : '')
+              .map((p: any) => {
+                if (!p || typeof p !== 'object') return '';
+
+                // If the part is a functionResponse, unpack its response.content
+                if (p.functionResponse && Array.isArray(p.functionResponse.response?.content)) {
+                  return p.functionResponse.response.content.map((inner: any) => {
+                    if (!inner) return '';
+                    if (typeof inner.text === 'string') return inner.text;
+                    if (inner.type === 'image' && inner.data && inner.mimeType) {
+                      const payload = String(inner.data).replace(/\s+/g, '');
+                      return `<img src="data:${inner.mimeType};base64,${payload}" alt="Generated image" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin: 8px 0;" />`;
+                    }
+                    return '';
+                  }).join('');
+                }
+
+                if (typeof p.text === 'string') return p.text;
+                if (p.type === 'image' && p.data && p.mimeType) {
+                  const payload = String(p.data).replace(/\s+/g, '');
+                  return `<img src="data:${p.mimeType};base64,${payload}" alt="Generated image" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin: 8px 0;" />`;
+                }
+
+                return '';
+              })
               .join('');
             
             if (!chunk) continue;

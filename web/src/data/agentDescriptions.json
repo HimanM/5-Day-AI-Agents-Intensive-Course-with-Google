@@ -44,5 +44,16 @@
       "Multi-currency conversion calculations",
       "Clear formatted output with currency symbols"
     ]
+  },
+  "mcp_generator": {
+    "title": "MCP Generator Agent",
+    "description": "Content generation using a local Model Context Protocol (MCP) server. Demonstrates MCP integration with tools for generating images, echoing text, and performing calculations using a stable local Node.js server.",
+    "features": [
+      "Local MCP server integration for stable connections",
+      "Generate tiny sample images (16x16 pixels)",
+      "Echo and manipulate text content",
+      "Perform basic arithmetic calculations",
+      "No external dependencies or hanging issues"
+    ]
   }
 }
