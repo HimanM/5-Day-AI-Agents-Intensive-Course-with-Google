@@ -39,7 +39,7 @@ What we implemented today in this repo
 
 
 
-## Today’s Learnings (Day 1 — 2025‑11‑10)
+## Day 1 — 2025‑11‑10
 
 Focus: Agent architectures and workflow orchestration with ADK, grounded in Kaggle’s Day 1 materials and the ADK documentation.
 
