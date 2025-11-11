@@ -33,7 +33,7 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
   ({ messages, connected, showAgentInfo, selectedAgent }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dismissedErrorId, setDismissedErrorId] = useState<string | null>(null);
+  // We will always show the latest system error in the top-left banner.
 
   useImperativeHandle(ref, () => ({
     containerRef
@@ -45,25 +45,38 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
 
   const hasNonSystemMessages = messages.filter(m => m.role !== 'system').length > 0;
 
-  // Detect a prominent system error message to show in a banner
-  const errorMessage = messages.find(m =>
-    m.role === 'system' && 
-    m.id !== dismissedErrorId &&
+  // When an error appears we show it in the top-left banner and auto-hide it
+  // after 10s. If older system messages exist they should not resurface the
+  // banner once dismissed; the banner will only reappear for a newer error.
+  const [dismissedAll, setDismissedAll] = useState(false);
+  const [lastShownErrorId, setLastShownErrorId] = useState<string | null>(null);
+
+  // Detect the latest prominent system error message to show in a banner.
+  // We reverse the messages so the newest matching system message is selected.
+  const latestError = [...messages].reverse().find(m =>
+    m.role === 'system' &&
     /error|failed|fail(ed)?|resource exhausted|too many requests|429/i.test(m.text)
   );
-  
-  // Track the current error ID being shown to keep filtering it even after dismissal
-  const currentErrorId = errorMessage?.id || dismissedErrorId;
 
-  // Auto-dismiss error banner after 10 seconds
+  // When a new error arrives, reset dismissed state and start the auto-hide timer.
   useEffect(() => {
-    if (errorMessage) {
-      const timer = setTimeout(() => {
-        setDismissedErrorId(errorMessage.id);
-      }, 10000);
-      return () => clearTimeout(timer);
+    if (!latestError) return;
+
+    // If this is a new error (different id), show it and start timer
+    if (latestError.id !== lastShownErrorId) {
+      setLastShownErrorId(latestError.id);
+      setDismissedAll(false);
     }
-  }, [errorMessage]);
+
+    // Start/refresh auto-dismiss timer
+    const t = setTimeout(() => setDismissedAll(true), 10000);
+    return () => clearTimeout(t);
+  }, [latestError, lastShownErrorId]);
+
+  // Only show the banner when we have a latestError and it has not been dismissedAll
+  const errorMessage = latestError && !dismissedAll ? latestError : null;
+
+  // We will not render system messages inline in the chat (remove the middle error display).
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto relative">
       {/* Top-left error banner for important system errors */}
@@ -85,8 +98,8 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
         <div className="max-w-4xl mx-auto p-6 space-y-3">
           {/* Chat Messages */}
           {messages
-            // remove the error message from inline rendering to avoid showing it twice
-            .filter(m => !(currentErrorId && m.id === currentErrorId))
+            // remove all system messages from inline rendering to avoid the middle/inline error display
+            .filter(m => m.role !== 'system')
             .map((msg) => (
               <ChatMessage key={msg.id} msg={msg} />
           ))}
