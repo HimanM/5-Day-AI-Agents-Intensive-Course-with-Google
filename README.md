@@ -75,8 +75,10 @@ Gemini/
 │  ├─ parallel_workflow/      # ParallelAgent + synthesis; uses google_search
 │  ├─ loop_workflow/          # LoopAgent: critique/refine with escalation
 │  ├─ currency_converter/     # Currency conversion (google_search + code execution)
-│  └─ mcp_generator/          # MCP demo: local MCP server + tools (images, echo, add)
-├─ web/                       # Next.js 14 frontend (Tailwind, shadcn, SSE chat UI)
+│  ├─ mcp_generator/          # MCP demo: local MCP server + tools (images, echo, add)
+│  ├─ session_demo/           # Session state management with TinyDB persistence
+│  └─ memory_demo/            # Long-term memory storage with categorization
+├─ web/                       # Next.js 14 frontend (Tailwind, shadcn, SSE chat UI, markdown support)
 ├─ frontend/                  # Simple HTML/JS prototype (legacy)
 ├─ cors_proxy.py              # FastAPI CORS proxy (dev only)
 ├─ nginx.conf                 # Production reverse proxy config
@@ -168,12 +170,61 @@ python cors_proxy.py
 
 ---
 
--## Plan for the week (placeholders)
+## Day 3 — 2025-11-12
+
+Today I followed the Kaggle Day 3 materials focused on agent sessions and memory management. The official notebooks we used as reference are:
+
+- Day 3a — Agent sessions: https://www.kaggle.com/code/kaggle5daysofai/day-3a-agent-sessions
+- Day 3b — Agent memory: https://www.kaggle.com/code/kaggle5daysofai/day-3b-agent-memory
+
+Summary of the notebooks (high level)
+- Day 3a covers session state management: maintaining conversation context, storing user preferences temporarily, and persisting state across interactions using TinyDB. It demonstrates how to track conversation context and user preferences within a session.
+- Day 3b focuses on long-term memory: storing facts, personal information, and learned knowledge that persists across multiple sessions. It shows how to categorize memories, search through them, and retrieve relevant information when needed.
+
+What we implemented today in this repo
+- `Agents/session_demo` — Session State Management Agent
+  - Purpose: Demonstrates session state management with persistent storage using TinyDB. Tracks user preferences and conversation context.
+  - Implementation details:
+    - State management tools: `save_user_preference`, `get_user_preference`, `list_all_preferences` for managing user data
+    - Persistent storage using TinyDB with session_state.db file
+    - Backend helper function `get_backend_session_data` that returns session data in `BACKEND_PROCESSES:` format for frontend visualization
+    - Automatic preference extraction from user messages (name, country, favorite color, etc.)
+  - Key files: `Agents/session_demo/agent.py` (defines session tools and backend helper)
+  - Notes: Session state is useful for maintaining context within a conversation and storing temporary user preferences that need to persist across interactions.
+
+- `Agents/memory_demo` — Long-Term Memory Agent
+  - Purpose: Demonstrates long-term memory storage and retrieval using TinyDB. Stores facts, preferences, and personal information with categorization.
+  - Key files:
+    - `Agents/memory_demo/agent.py` — ADK agent with memory management tools including save, search, retrieve, list, and delete operations
+  - Memory tools:
+    - `save_memory(key, content, category)` — Save memories with unique keys and categories
+    - `search_memories(query, category)` — Search memories by content or filter by category
+    - `get_memory_by_key(key)` — Retrieve specific memories
+    - `list_all_memories(category)` — List all stored memories grouped by category
+    - `delete_memory(key)` — Remove memories
+    - `get_backend_memory_data()` — Backend helper that returns memory data in `BACKEND_PROCESSES:` format
+  - Memory categories:
+    - `personal` — Birthdays, names, personal details
+    - `preferences` — Favorite things, likes/dislikes
+    - `facts` — General knowledge, learned information
+    - `goals` — User goals, aspirations
+  - Notes: Long-term memory enables AI assistants to remember information across multiple conversations and sessions, creating a more personalized experience.
+
+Frontend enhancements
+- Added `react-markdown` support for rendering markdown-formatted text in chat bubbles
+- LLM outputs with markdown (bold, italic, code blocks, lists, headings) are now properly formatted
+- Custom component styling for markdown elements with dark mode support
+
+---
+
+## Plan for the week (placeholders)
 - Day 1 — Agent architectures and ADK workflows ✅
 - Day 2 — Agent tools & best practices ✅
   - Covered: defining and wiring tools, agents-as-tools patterns, local MCP servers, safe SSE handling, and frontend image rendering.
   - Implemented in repo: `Agents/currency_converter` (google_search + BuiltInCodeExecutor) and `Agents/mcp_generator` (local MCP server + getTinyImage/echo/addNumbers tools).
-- Day 3 — TODO
+- Day 3 — Agent sessions and memory management ✅
+  - Covered: session state management, persistent storage with TinyDB, long-term memory with categorization and search, backend data exposure patterns.
+  - Implemented in repo: `Agents/session_demo` (session state with preferences) and `Agents/memory_demo` (long-term memory with categories).
 - Day 4 — TODO
 - Day 5 — TODO (Capstone planning and build)
 

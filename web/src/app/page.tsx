@@ -50,7 +50,7 @@ export default function ChatPage() {
     fetch(`${API_BASE}/list-apps`)
       .then(r => r.json())
       .then((apps: string[]) => {
-        const allowed = ['my_agent', 'sequential_workflow', 'parallel_workflow', 'loop_workflow', 'currency_converter', 'mcp_generator'];
+        const allowed = ['my_agent', 'sequential_workflow', 'parallel_workflow', 'loop_workflow', 'currency_converter', 'mcp_generator', 'session_demo', 'memory_demo'];
         const filtered = apps.filter(a => allowed.includes(a));
         const agentList = filtered.length ? filtered : apps.filter(a => !a.startsWith('__'));
         setAgents(agentList);
