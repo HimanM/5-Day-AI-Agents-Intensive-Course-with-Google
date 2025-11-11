@@ -107,23 +107,13 @@ def list_all_preferences(tool_context: ToolContext) -> Dict[str, Any]:
     """
     List all stored user preferences.
     """
-    # Get from session state
-    session_prefs = {
-        key.replace('user:', ''): value 
-        for key, value in tool_context.state.items() 
-        if key.startswith('user:')
-    }
-    
-    # Get from persistent storage
+    # Get from persistent storage (State object doesn't support .items())
     all_records = state_table.all()
-    db_prefs = {
+    all_prefs = {
         record['key'].replace('user:', ''): record['value']
         for record in all_records
         if record['key'].startswith('user:')
     }
-    
-    # Merge (session state takes precedence)
-    all_prefs = {**db_prefs, **session_prefs}
     
     return {
         "status": "success",
@@ -150,7 +140,6 @@ def get_backend_session_data(tool_context: ToolContext) -> str:
         "type": "session_state",
         "persistent_state": persistent_data,
         "total_keys": len(persistent_data),
-        "db_path": DB_PATH
     }
     
     # Return in BACKEND_PROCESSES format (strict marker)

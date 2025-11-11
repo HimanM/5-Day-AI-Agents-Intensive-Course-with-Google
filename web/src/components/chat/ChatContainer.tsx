@@ -23,6 +23,7 @@ interface ChatContainerProps {
   connected: boolean;
   showAgentInfo: boolean;
   selectedAgent: string;
+  onExampleClick?: (example: string) => void;
 }
 
 export interface ChatContainerRef {
@@ -30,7 +31,7 @@ export interface ChatContainerRef {
 }
 
 export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
-  ({ messages, connected, showAgentInfo, selectedAgent }, ref) => {
+  ({ messages, connected, showAgentInfo, selectedAgent, onExampleClick }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // We will always show the latest system error in the top-left banner.
@@ -92,7 +93,7 @@ export const ChatContainer = forwardRef<ChatContainerRef, ChatContainerProps>(
       {/* Agent Info Box - Centered when no messages */}
       {connected && showAgentInfo && !hasNonSystemMessages && selectedAgent ? (
         <div className="flex items-center justify-center min-h-full p-6">
-          <AgentInfoBox selectedAgent={selectedAgent} />
+          <AgentInfoBox selectedAgent={selectedAgent} onExampleClick={onExampleClick} />
         </div>
       ) : (
         <div className="max-w-4xl mx-auto p-6 space-y-3">

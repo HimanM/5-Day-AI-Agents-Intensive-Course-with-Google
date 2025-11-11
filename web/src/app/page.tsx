@@ -40,12 +40,31 @@ export default function ChatPage() {
   const sendingRef = useRef(false);
   const chatContainerRef = useRef<ChatContainerRef>(null);
 
-  // Initialize session ID on client only to avoid hydration mismatch
+  // Initialize session ID and handle auto-reconnect
   useEffect(() => {
+    // Always create a new session ID
     setSessionId(`s_${Date.now()}`);
+    
+    // Check for auto-reconnect data
+    const autoReconnectData = localStorage.getItem('autoReconnect');
+    
+    if (autoReconnectData) {
+      try {
+        const { agent, user: savedUser } = JSON.parse(autoReconnectData);
+        // Restore user but create NEW session
+        setUser(savedUser);
+        // Store the agent to restore after agents load
+        sessionStorage.setItem('pendingAgent', agent);
+        sessionStorage.setItem('autoConnect', 'true');
+        localStorage.removeItem('autoReconnect');
+      } catch (e) {
+        console.error('Failed to parse auto-reconnect data:', e);
+        localStorage.removeItem('autoReconnect');
+      }
+    }
   }, []);
 
-  // Fetch available agents
+  // Fetch available agents and handle auto-reconnect
   useEffect(() => {
     fetch(`${API_BASE}/list-apps`)
       .then(r => r.json())
@@ -54,7 +73,27 @@ export default function ChatPage() {
         const filtered = apps.filter(a => allowed.includes(a));
         const agentList = filtered.length ? filtered : apps.filter(a => !a.startsWith('__'));
         setAgents(agentList);
-        if (agentList.length) setSelectedAgent(agentList[0]);
+        
+        // Check if we need to restore a specific agent
+        const pendingAgent = sessionStorage.getItem('pendingAgent');
+        const shouldAutoConnect = sessionStorage.getItem('autoConnect') === 'true';
+        
+        if (pendingAgent && agentList.includes(pendingAgent)) {
+          setSelectedAgent(pendingAgent);
+          sessionStorage.removeItem('pendingAgent');
+          
+          // Auto-connect if flagged
+          if (shouldAutoConnect) {
+            sessionStorage.removeItem('autoConnect');
+            // Wait for state to update then connect
+            setTimeout(() => {
+              connect();
+            }, 300);
+          }
+        } else if (agentList.length) {
+          // Default to first agent
+          setSelectedAgent(agentList[0]);
+        }
       })
       .catch(console.error);
   }, []);
@@ -97,6 +136,48 @@ export default function ChatPage() {
       setMessages([{ role: 'system', text: 'Connection failed.', id: `sys-${Date.now()}` }]);
       setConnected(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    // Disconnect current session if connected
+    if (connected && selectedAgent && sessionId) {
+      try {
+        await fetch(`${API_BASE}/apps/${selectedAgent}/users/${user}/sessions/${sessionId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        console.error('Failed to disconnect session:', e);
+      }
+    }
+
+    // Clear chat and reset state
+    setMessages([]);
+    setConnected(false);
+    setShowAgentInfo(true);
+    setTraceFetchTrigger(0);
+    authorBubbles.current.clear();
+    
+    // Generate new session ID
+    const newSessionId = `s_${Date.now()}`;
+    setSessionId(newSessionId);
+    
+    // Auto-connect with new session
+    setTimeout(async () => {
+      try {
+        setMessages([{ role: 'system', text: 'Connecting with new session...', id: `sys-${Date.now()}` }]);
+        await fetch(`${API_BASE}/apps/${selectedAgent}/users/${user}/sessions/${newSessionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ createdAt: Date.now() })
+        });
+        setMessages([{ role: 'system', text: 'Connected. New session ready.', id: `sys-${Date.now()}` }]);
+        setConnected(true);
+      } catch (e) {
+        setMessages([{ role: 'system', text: 'Connection failed.', id: `sys-${Date.now()}` }]);
+        setConnected(false);
+      }
+    }, 300);
   };
 
   const send = async () => {
@@ -407,6 +488,7 @@ export default function ChatPage() {
         onSessionChange={setSessionId}
         connected={connected}
         onConnect={connect}
+        onRefresh={handleRefresh}
         traceFetchTrigger={traceFetchTrigger}
       />
       
@@ -417,6 +499,14 @@ export default function ChatPage() {
           connected={connected}
           showAgentInfo={showAgentInfo}
           selectedAgent={selectedAgent}
+          onExampleClick={(example) => {
+            setInput(example);
+            // Auto-focus the input after setting the example
+            setTimeout(() => {
+              const inputElement = document.querySelector('textarea');
+              inputElement?.focus();
+            }, 100);
+          }}
         />
         
         <ChatInput
